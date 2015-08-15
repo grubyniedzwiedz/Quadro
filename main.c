@@ -4,6 +4,8 @@
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_i2c.h"
 #include "stm32f4xx_tim.h"
+#include "stm32f4xx_exti.h"
+#include "stm32f4xx_syscfg.h"
 #include "misc.h"
 
 
@@ -64,7 +66,7 @@ void init_Button(void){
 
 
 }
-																		//Ustawienia I2C i odczytów z IMU
+																		//Ustawienia I2C i odczytÃ³w z IMU
 void init_I2C1(void){
 
 	GPIO_InitTypeDef GPIO_InitStruct;
@@ -176,7 +178,7 @@ void I2C_stop(I2C_TypeDef* I2Cx){
 void init_gyro(void){
 
 
-	    //ustawianie parametrów urzadzenia
+	    //ustawianie parametrÃ³w urzadzenia
 	     I2C_start(I2C1 ,GYRO_ADDRESS_TR, I2C_Direction_Transmitter); // start a transmission in Master transmitter mode
 	     // Low_ODR = 0 (low speed ODR disabled)
 	     I2C_write(I2C1, LOW_ODR);
@@ -201,7 +203,7 @@ void init_gyro(void){
 void init_akm(void){
 
 
-	    //ustawianie parametrów urzadzenia
+	    //ustawianie parametrÃ³w urzadzenia
 
 	// Accelerometer
     	 I2C_start(I2C1 ,AKM_ADDRESS_TR, I2C_Direction_Transmitter); // start a transmission in Master transmitter mode
@@ -240,7 +242,7 @@ void init_akm(void){
 void init_bar(void){
 
 
-	    //ustawianie parametrów urzadzenia
+	    //ustawianie parametrÃ³w urzadzenia
 
 	// Barometr
     	 I2C_start(I2C1 ,BAR_ADDRESS_TR, I2C_Direction_Transmitter); // start a transmission in Master transmitter mode
@@ -271,7 +273,7 @@ void gyro_read(void){
 	    		//received_data[2] = I2C_read_nack(I2C1); // read one byte and don't request another byte, stop transmission
 	    		//I2C_stop(I2C1); // stop the transmission
 	    		//8 wyzszych bitow podawanych pozniej odpowiada za znak 0xFF znaczy ujemne
-	    			//Dla zakresu ±250 dps LSB przetwarzania wynosi zatem 0,00875 dps
+	    			//Dla zakresu Â±250 dps LSB przetwarzania wynosi zatem 0,00875 dps
 
 
 
@@ -329,7 +331,7 @@ void ak_read(void){
 
 	    		I2C_start(I2C1, AKM_ADDRESS_REC, I2C_Direction_Receiver); // start a transmission in Master receiver mode
 
-	    		//ustawic obslugê zmiennoprzecinkowa i poprawnie odczytac format danych
+	    		//ustawic obslugÄ™ zmiennoprzecinkowa i poprawnie odczytac format danych
 
 
 	    		akxyz[0]=I2C_read_ack(I2C1) | I2C_read_ack(I2C1)<<8;
@@ -392,7 +394,7 @@ void m_read(void){
 
 	    		I2C_start(I2C1, AKM_ADDRESS_REC, I2C_Direction_Receiver); // start a transmission in Master receiver mode
 
-	    		//ustawic obslugê zmiennoprzecinkowa i poprawnie odczytac format danych
+	    		//ustawic obslugÄ™ zmiennoprzecinkowa i poprawnie odczytac format danych
 
 	    			mxyztmp=I2C_read_ack(I2C1);
 	    			mxyz[0]=mxyztmp <<8 | I2C_read_ack(I2C1);
@@ -441,7 +443,7 @@ void bar_read(void){
 
 	    		I2C_start(I2C1, BAR_ADDRESS_REC, I2C_Direction_Receiver); // start a transmission in Master receiver mode
 
-	    		//ustawic obslugê zmiennoprzecinkowa i poprawnie odczytac format danych
+	    		//ustawic obslugÄ™ zmiennoprzecinkowa i poprawnie odczytac format danych
 
 	    			bartmp=I2C_read_ack(I2C1);
 	    			barpress=bartmp <<8 |  I2C_read_ack(I2C1);
@@ -476,7 +478,7 @@ void bar_read(void){
 }
 
 
-																//Ustawienia sygna³u PWM podawanego na ESC
+																//Ustawienia sygnaÅ‚u PWM podawanego na ESC
 void TIM_Config_ESC(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -578,116 +580,173 @@ void PWM_SetDC(uint16_t channel,uint16_t dutycycle)
 
 
 
-																//Ustawienia PWM dla sygna³u pobieranego z aparatury
-// Hold onto the Channel 1 init structure -- we will use it to reverse
-// polarity on every edge interrupt.
-static TIM_ICInitTypeDef TIM_CH1_ICInitStructure;
+																//Ustawienia PWM dla sygnaÅ‚u pobieranego z aparatury
+int inpwm[3];
+uint capture1=0;
+uint capture2=0;
+uint capture_ready=0;
+/* Configure pins to be interrupts */
+void Configure_PD0(void) {
+    /* Set variables used */
+    GPIO_InitTypeDef GPIO_InitStruct;
+    EXTI_InitTypeDef EXTI_InitStruct;
+    NVIC_InitTypeDef NVIC_InitStruct;
 
-//#define GPIO_AF_TIM2 GPIO_AF_2
+    /* Enable clock for GPIOD */
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+    /* Enable clock for SYSCFG */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
-void ConfigPwmIn() {
- GPIO_InitTypeDef GPIO_InitStructure;
- TIM_ICInitTypeDef TIM_ICInitStructure;
- NVIC_InitTypeDef NVIC_InitStructure;
+    /* Set pin as input */
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_0;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_100MHz;
+    GPIO_Init(GPIOD, &GPIO_InitStruct);
 
- TIM_DeInit(TIM2 );
- uint16_t PrescalerValue = 0;
- PrescalerValue = (uint16_t) ((SystemCoreClock /2) / 60000) - 1;
- /* TIM2 clock enable */
- RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+    /* Tell system that you will use PD0 for EXTI_Line0 */
+    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOD, EXTI_PinSource0);
 
- /* GPIOC clock enable */
- RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+    /* PD0 is connected to EXTI_Line0 */
+    EXTI_InitStruct.EXTI_Line = EXTI_Line0;
+    /* Enable interrupt */
+    EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+    /* Interrupt mode */
+    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
+    /* Triggers on rising and falling edge */
+    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+    /* Add to EXTI */
+    EXTI_Init(&EXTI_InitStruct);
 
- /* TIM2 GPIO pin configuration : CH1=PD3, C2=PD4, CH3=PD7, CH4=PD6 */
- GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3 | GPIO_Pin_4 | GPIO_Pin_7 | GPIO_Pin_6;
- GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
- GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
- GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
- GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
- GPIO_Init(GPIOD, &GPIO_InitStructure);
-
- /* Connect pins to TIM3 AF2 */
- GPIO_PinAFConfig(GPIOD, GPIO_PinSource3, GPIO_AF_TIM2 );
- GPIO_PinAFConfig(GPIOD, GPIO_PinSource4, GPIO_AF_TIM2 );
- GPIO_PinAFConfig(GPIOD, GPIO_PinSource7, GPIO_AF_TIM2 );
- GPIO_PinAFConfig(GPIOD, GPIO_PinSource6, GPIO_AF_TIM2 );
-
- NVIC_InitStructure.NVIC_IRQChannel = TIM2_IRQn;
- NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
- NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
- NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
- NVIC_Init(&NVIC_InitStructure);
-
- /* Enable capture*/
- TIM_CH1_ICInitStructure.TIM_Channel = TIM_Channel_1;
- TIM_CH1_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Rising;
- TIM_CH1_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
- TIM_CH1_ICInitStructure.TIM_ICPrescaler = PrescalerValue;
- TIM_CH1_ICInitStructure.TIM_ICFilter = 0;
- TIM_ICInit(TIM2, &TIM_ICInitStructure);
- TIM_ICInitStructure.TIM_Channel = TIM_Channel_2;
- TIM_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Falling;
- TIM_ICInitStructure.TIM_ICSelection = TIM_ICSelection_DirectTI;
- TIM_ICInitStructure.TIM_ICPrescaler = TIM_ICPSC_DIV1;
- TIM_ICInitStructure.TIM_ICFilter = 0;
- TIM_ICInit(TIM2, &TIM_ICInitStructure);
- TIM_ICInitStructure.TIM_Channel = TIM_Channel_3;
- TIM_ICInit(TIM2, &TIM_ICInitStructure);
- TIM_ICInitStructure.TIM_Channel = TIM_Channel_4;
- TIM_ICInit(TIM2, &TIM_ICInitStructure);
-
- /* Enable TIM2 */
- TIM_Cmd(TIM2, ENABLE);
-
- /* Enable CC1-4 interrupt */
- TIM_ITConfig(TIM2, TIM_IT_CC1 | TIM_IT_CC2 | TIM_IT_CC3 | TIM_IT_CC4, ENABLE);
-
- /* Clear CC1 Flag*/
- TIM_ClearFlag(TIM2, TIM_FLAG_CC1 | TIM_FLAG_CC2 | TIM_FLAG_CC3 | TIM_FLAG_CC4 );
+    /* Add IRQ vector to NVIC */
+    /* PD0 is connected to EXTI_Line0, which has EXTI0_IRQn vector */
+    NVIC_InitStruct.NVIC_IRQChannel = EXTI0_IRQn;
+    /* Set priority */
+    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x00;
+    /* Set sub priority */
+    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x00;
+    /* Enable interrupt */
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    /* Add to NVIC */
+    NVIC_Init(&NVIC_InitStruct);
 }
 
-static volatile uint32_t ccr[4];
-static volatile char pulseState = 0;
+void Configure_PB12(void) {
+    /* Set variables used */
+    GPIO_InitTypeDef GPIO_InitStruct;
+    EXTI_InitTypeDef EXTI_InitStruct;
+    NVIC_InitTypeDef NVIC_InitStruct;
 
-void TIM2_IRQHandler() {
-	GPIO_SetBits(GPIOD, GPIO_Pin_12);
- if (TIM2 ->SR & TIM_IT_CC1 ) {
-  TIM2 ->SR &= (~TIM_IT_CC1 );
+    /* Enable clock for GPIOB */
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);
+    /* Enable clock for SYSCFG */
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_SYSCFG, ENABLE);
 
-  if (pulseState == 0) {
-   TIM_CH1_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Falling;
+    /* Set pin as input */
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_12;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_100MHz;
+    GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-   // Any time we get a rising edge on CH1, we reset the counter. All channels are
-   // phase aligned, so they all use this as a reference.
-   TIM_SetCounter(TIM2, 0);
-  } else {
-   TIM_CH1_ICInitStructure.TIM_ICPolarity = TIM_ICPolarity_Rising;
+    /* Tell system that you will use PB12 for EXTI_Line12 */
+    SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOB, EXTI_PinSource12);
 
-   // Pull the value on the falling edge.
-   ccr[0] = TIM_GetCapture1(TIM2 );
-   GPIO_SetBits(GPIOD, GPIO_Pin_13);
-   printf("AX: %d           ", ccr[0]);
-  }
-  pulseState = !pulseState;
+    /* PB12 is connected to EXTI_Line12 */
+    EXTI_InitStruct.EXTI_Line = EXTI_Line12;
+    /* Enable interrupt */
+    EXTI_InitStruct.EXTI_LineCmd = ENABLE;
+    /* Interrupt mode */
+    EXTI_InitStruct.EXTI_Mode = EXTI_Mode_Interrupt;
+    /* Triggers on rising and falling edge */
+    EXTI_InitStruct.EXTI_Trigger = EXTI_Trigger_Rising_Falling;
+    /* Add to EXTI */
+    EXTI_Init(&EXTI_InitStruct);
 
-  // Reverse polarity.
-  TIM_ICInit(TIM2, &TIM_CH1_ICInitStructure);
- }
-
- if (TIM2 ->SR & TIM_IT_CC2 ) {
-  TIM2 ->SR &= (~TIM_IT_CC2 );
-  ccr[1] = TIM_GetCapture2(TIM2 );
- }
- if (TIM2 ->SR & TIM_IT_CC3 ) {
-  TIM2 ->SR &= (~TIM_IT_CC3 );
-  ccr[2] = TIM_GetCapture3(TIM2 );
- }
- if (TIM2 ->SR & TIM_IT_CC4 ) {
-  TIM2 ->SR &= (~TIM_IT_CC4 );
-  ccr[3] = TIM_GetCapture4(TIM2 );
- }
+    /* Add IRQ vector to NVIC */
+    /* PB12 is connected to EXTI_Line12, which has EXTI15_10_IRQn vector */
+    NVIC_InitStruct.NVIC_IRQChannel = EXTI15_10_IRQn;
+    /* Set priority */
+    NVIC_InitStruct.NVIC_IRQChannelPreemptionPriority = 0x00;
+    /* Set sub priority */
+    NVIC_InitStruct.NVIC_IRQChannelSubPriority = 0x01;
+    /* Enable interrupt */
+    NVIC_InitStruct.NVIC_IRQChannelCmd = ENABLE;
+    /* Add to NVIC */
+    NVIC_Init(&NVIC_InitStruct);
 }
+
+/* Set interrupt handlers */
+/* Handle PD0 interrupt */
+void EXTI0_IRQHandler(void) {
+    /* Make sure that interrupt flag is set */
+    if (EXTI_GetITStatus(EXTI_Line0) != RESET) {
+        /* Do your stuff when PD0 is changed */
+    	if(capture_ready == 0)
+    	{
+    	 if(GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_0) && !capture2) {
+
+    		 inpwm[0]=TIM_GetCounter(TIM2);
+    		 capture1=1;
+    	  }
+    	 if(!GPIO_ReadInputDataBit(GPIOD, GPIO_Pin_0) && capture1){
+
+    		  inpwm[1]=TIM_GetCounter(TIM2);
+    		  capture2=1;
+
+    	  }
+    	}
+    	if(capture1 && capture2){
+    		capture_ready=1;
+    		capture1=0;
+    		capture2=0;
+
+    		inpwm[3] = inpwm[1] - inpwm[0];
+    		//printf("CI_1: %d\r\n", inpwm[0]);
+    		//printf("CI_2: %d\r\n", inpwm[1]);
+    	}
+
+        /* Clear interrupt flag */
+        EXTI_ClearITPendingBit(EXTI_Line0);
+    }
+}
+
+/* Handle PB12 interrupt */
+void EXTI15_10_IRQHandler(void) {
+    /* Make sure that interrupt flag is set */
+    if (EXTI_GetITStatus(EXTI_Line12) != RESET) {
+        /* Do your stuff when PB12 is changed */
+
+
+        /* Clear interrupt flag */
+        EXTI_ClearITPendingBit(EXTI_Line12);
+    }
+}
+
+void initTimers()
+{
+   RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM2, ENABLE);
+
+   TIM_TimeBaseInitTypeDef base_timer;
+   TIM_TimeBaseStructInit(&base_timer);
+   base_timer.TIM_Prescaler = (uint16_t) ((SystemCoreClock /2) / 60000) - 1;
+   base_timer.TIM_Period = 1000;
+   base_timer.TIM_ClockDivision = 0;
+   base_timer.TIM_CounterMode = TIM_CounterMode_Up;
+   TIM_TimeBaseInit(TIM2, &base_timer);
+   TIM_Cmd(TIM2, ENABLE);
+}
+
+
+
+
+
+
+
+
+
 
 
 
@@ -720,8 +779,12 @@ int main(void) {
     PWM_SetDC(4,50);
 
 
+    /* Configure PD0 as interrupt */
+    Configure_PD0();
+    /* Configure PB12 as interrupt */
+    Configure_PB12();
 
-    ConfigPwmIn();
+    initTimers();
 
     GPIO_SetBits(GPIOD, GPIO_Pin_15);
 
@@ -743,9 +806,13 @@ int main(void) {
 while(1)
 {
 
+if (capture_ready){
 
+	printf("CI_2: %d\r\n", inpwm[3]);
+	capture_ready=0;
+	GPIO_SetBits(GPIOD, GPIO_Pin_12);
 
-
+}
 
 	//Button reaction
 
