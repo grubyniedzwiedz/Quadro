@@ -63,7 +63,7 @@
       </source>
       <source file="..\..\..\semihosting\semihosting.h" lastModified="14cc022963d">
       </source>
-      <source file="..\..\..\main.c" lastModified="14f32bb29bc">
+      <source file="..\..\..\main.c" lastModified="14f33c7665a">
          <include file="..\..\..\cmsis_lib\include\stm32f4xx_rcc.h"/>
          <include file="..\..\..\cmsis_lib\include\stm32f4xx_gpio.h"/>
          <include file="..\..\..\cmsis_lib\include\stm32f4xx_i2c.h"/>

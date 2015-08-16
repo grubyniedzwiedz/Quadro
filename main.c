@@ -7,8 +7,16 @@
 #include "stm32f4xx_exti.h"
 #include "stm32f4xx_syscfg.h"
 #include "misc.h"
+#include "math.h"
 
-
+int inpwm[3];
+	uint capture1=0;
+	uint capture2=0;
+	uint capture_ready=0;
+	volatile uint16_t pilot_w;
+	volatile float gxyzf[3];
+	volatile float akxyzf[3];
+	int ster_pilot=0;
 
 //adresowanie gyro i adresy srejestrow
 #define GYRO_ADDRESS_TR  0b11010111
@@ -261,7 +269,7 @@ void gyro_read(void){
 
 	 	 	 	 int gxyzi[3];
 
-	 	 	 	 float gxyzf[3];
+
 
 
 				//Odczyt
@@ -312,9 +320,9 @@ void gyro_read(void){
 
 
 
-	    				printf("GX: %d           ", (int)(gxyzf[0]));
-	    				printf("GY: %d           ", (int)(gxyzf[1]));
-	    				printf("GZ: %d\r\n", (int)(gxyzf[2]));
+	    				//printf("GX: %d           ", (int)(gxyzf[0]));
+	    				//printf("GY: %d           ", (int)(gxyzf[1]));
+	    				//printf("GZ: %d\r\n", (int)(gxyzf[2]));
 }
 
 void ak_read(void){
@@ -323,7 +331,6 @@ void ak_read(void){
 
 	 	 	 	int akxyzi[3];
 
-	 	 	 	float akxyzf[3];
 
 				//Odczyt
 	    		I2C_start(I2C1 ,AKM_ADDRESS_TR, I2C_Direction_Transmitter); // start a transmission in Master transmitter mode
@@ -369,9 +376,9 @@ void ak_read(void){
 	    		akxyzf[2]=akxyzf[2]/8192;
 
 
-	    				printf("AX: %d           ", (int)(akxyzf[0]*100.0f));
-	    				printf("AY: %d           ", (int)(akxyzf[1]*100.0f));
-	    				printf("AZ: %d\r\n"       , (int)(akxyzf[2]*100.0f));
+	    				//printf("AX: %d           ", (int)(akxyzf[0]*100.0f));
+	    				//printf("AY: %d           ", (int)(akxyzf[1]*100.0f));
+	    				//printf("AZ: %d\r\n"       , (int)(akxyzf[2]*100.0f));
 
 
 }
@@ -581,10 +588,7 @@ void PWM_SetDC(uint16_t channel,uint16_t dutycycle)
 
 
 																//Ustawienia PWM dla sygnału pobieranego z aparatury
-int inpwm[3];
-uint capture1=0;
-uint capture2=0;
-uint capture_ready=0;
+
 /* Configure pins to be interrupts */
 void Configure_PD0(void) {
     /* Set variables used */
@@ -699,13 +703,30 @@ void EXTI0_IRQHandler(void) {
     	  }
     	}
     	if(capture1 && capture2){
-    		capture_ready=1;
+    		capture_ready = 1;
     		capture1=0;
     		capture2=0;
-
-    		inpwm[3] = inpwm[1] - inpwm[0];
+    		inpwm[2] = inpwm[1] - inpwm[0];
+    		if(inpwm[1]<inpwm[0])
+    			inpwm[2]=1001+inpwm[2];
+    		pilot_w=inpwm[2];
+    		//printf("CI_end: %d\r\n", inpwm[2]);
     		//printf("CI_1: %d\r\n", inpwm[0]);
     		//printf("CI_2: %d\r\n", inpwm[1]);
+    		GPIO_SetBits(GPIOD, GPIO_Pin_12);
+    		if(ster_pilot){
+    				GPIO_SetBits(GPIOD, GPIO_Pin_13);
+    				//printf("CI_end: %d\r\n", pilot_w);
+    				//capture_ready =0;
+    				PWM_SetDC(1,pilot_w);
+    				PWM_SetDC(2,pilot_w);
+    				PWM_SetDC(3,pilot_w);
+    				PWM_SetDC(4,pilot_w);
+    			}
+
+
+    		capture_ready =0;
+
     	}
 
         /* Clear interrupt flag */
@@ -731,7 +752,7 @@ void initTimers()
 
    TIM_TimeBaseInitTypeDef base_timer;
    TIM_TimeBaseStructInit(&base_timer);
-   base_timer.TIM_Prescaler = (uint16_t) ((SystemCoreClock /2) / 60000) - 1;
+   base_timer.TIM_Prescaler = (uint16_t) ((SystemCoreClock /2) / 50000) - 1;
    base_timer.TIM_Period = 1000;
    base_timer.TIM_ClockDivision = 0;
    base_timer.TIM_CounterMode = TIM_CounterMode_Up;
@@ -765,10 +786,10 @@ int main(void) {
     SystemInit();
     init_LED(); // initialize 4 LED's
     init_Button(); //initialize button
-	//\init_I2C1(); // initialize I2C peripheral
-    //init_gyro(); // initialize gyroskope
-    //init_akm(); // initialize akcelerometr i magnetometr
-    //init_bar();
+	init_I2C1(); // initialize I2C peripheral
+    init_gyro(); // initialize gyroskope
+    init_akm(); // initialize akcelerometr i magnetometr
+    init_bar();
 
 
     TIM_Config_ESC();
@@ -803,31 +824,40 @@ int main(void) {
     int i;
     int wyp;
 
+
+    //Katy eulera
+    const float alpha = 0.5;
+    //const float M_PI = 3.14;
+    	double fXg = 0;
+    	double fYg = 0;
+    	double fZg = 0;
+
+
+
 while(1)
 {
 
-if (capture_ready){
+//if (capture_ready){
 
-	printf("CI_2: %d\r\n", inpwm[3]);
-	capture_ready=0;
-	GPIO_SetBits(GPIOD, GPIO_Pin_12);
+	//printf("CI_end: %d\r\n", inpwm[2]);
+	//capture_ready=0;
+	//GPIO_SetBits(GPIOD, GPIO_Pin_12);
 
-}
+//}
 
 	//Button reaction
 
 	//Returs pin state (1 if HIGH, 0 if LOW)
 	if (GPIO_ReadInputDataBit(GPIOA, GPIO_Pin_0)) {
 		if(temp==0){
+			ster_pilot=1;
 		GPIO_ResetBits(GPIOD, GPIO_Pin_15);
 		GPIO_SetBits(GPIOD, GPIO_Pin_14);
-		PWM_SetDC(1,65);
-		PWM_SetDC(2,65);
-		PWM_SetDC(3,65);
-		PWM_SetDC(4,65);
+
 
 		temp=1;
 		}else{
+			ster_pilot=0;
 		GPIO_SetBits(GPIOD, GPIO_Pin_15);
 		GPIO_ResetBits(GPIOD, GPIO_Pin_14);
 		PWM_SetDC(1,50);
@@ -840,13 +870,34 @@ if (capture_ready){
 	 //for (i = 0; i < 5000000; i++);
 
 	     }
+	gyro_read();
+	//printf("GX: %d           ", (int)(gxyzf[0]));
+	//printf("GY: %d           ", (int)(gxyzf[1]));
+	//printf("GZ: %d\r\n", (int)(gxyzf[2]));
 
-		//Read Pilot PWM
-		//printf("Odczyty2: \r\n");
+	ak_read();
+	//printf("AX: %d           ", (int)(akxyzf[0]*100.0f));
+	//printf("AY: %d           ", (int)(akxyzf[1]*100.0f));
+	//printf("AZ: %d\r\n"       , (int)(akxyzf[2]*100.0f));
 
-	//TIM2_IRQHandler();
 
 
+
+	    double pitch, roll;
+
+
+	    //Low Pass Filter
+	    fXg = akxyzf[0] * alpha + (fXg * (1.0 - alpha));
+	    fYg = akxyzf[1] * alpha + (fYg * (1.0 - alpha));
+	    fZg = akxyzf[2] * alpha + (fZg * (1.0 - alpha));
+
+	    //Roll & Pitch Equations
+	    roll  = (atan2(-fYg, fZg)*180.0)/M_PI;
+	    pitch = (atan2(fXg, sqrtf(fYg*fYg + fZg*fZg))*180.0)/M_PI;
+
+	    printf("Roll: %d   "       , (int)(roll*100.0f));
+	    printf("Pitch: %d\r\n"       , (int)(pitch*100.0f));
+	    for (i = 0; i < 50000; i++);
 	//IMU reading
 	   //gyro_read();
 	   //ak_read();
