@@ -16,7 +16,14 @@ int inpwm[3];
 	volatile uint16_t pilot_w;
 	volatile float gxyzf[3];
 	volatile float akxyzf[3];
-	int ster_pilot=0;
+	volatile int ster_pilot=0;
+
+	volatile uint16_t pilot_w2;
+	int inpwm2[3];
+		uint capture12=0;
+		uint capture22=0;
+		uint capture_ready2=0;
+
 
 //adresowanie gyro i adresy srejestrow
 #define GYRO_ADDRESS_TR  0b11010111
@@ -193,7 +200,7 @@ void init_gyro(void){
 	     I2C_write(I2C1,0x00);
 	     I2C_stop(I2C1); // stop the transmission
 	     I2C_start(I2C1 ,GYRO_ADDRESS_TR, I2C_Direction_Transmitter); // start a transmission in Master transmitter mode
-	     // FS = 00 (+/- 250 dps full scale)
+	     // FS = 00 (+/- 250 dps full scale)  !!!changed 500dps
 	     I2C_write(I2C1, CTRL_REG4);
 	     I2C_write(I2C1,0x10);
 	     I2C_stop(I2C1); // stop the transmission
@@ -203,7 +210,11 @@ void init_gyro(void){
 	     I2C_write(I2C1, 0x6F);
 	     I2C_stop(I2C1); // stop the transmission
 
-
+	     I2C_start(I2C1 ,GYRO_ADDRESS_TR, I2C_Direction_Transmitter); // start a transmission in Master transmitter mode
+	     //Digital high pass filter reference value
+	     I2C_write(I2C1, 0x25);
+	     I2C_write(I2C1, 0x00);
+	     I2C_stop(I2C1); // stop the transmission
 
 
 }
@@ -312,17 +323,24 @@ void gyro_read(void){
 
 
 	    		gxyzf[0]=(int)(gxyzi[0]);
+	    		//gxyzf[0]=gxyzf[0]/65.5;
 	    		gxyzf[0]=gxyzf[0]/65.5;
 	    		gxyzf[1]=(int)(gxyzi[1]);
+	    		//gxyzf[1]=gxyzf[1]/65.5;
 	    		gxyzf[1]=gxyzf[1]/65.5;
 	    		gxyzf[2]=(int)(gxyzi[2]);
+	    		//gxyzf[2]=gxyzf[2]/65.5;
 	    		gxyzf[2]=gxyzf[2]/65.5;
 
 
 
-	    				//printf("GX: %d           ", (int)(gxyzf[0]));
-	    				//printf("GY: %d           ", (int)(gxyzf[1]));
-	    				//printf("GZ: %d\r\n", (int)(gxyzf[2]));
+	    				//printf("GX: %d           ", (int)(gxyzf[0]*10.0f));
+	    				//printf("GY: %d           ", (int)(gxyzf[1]*10.0f));
+	    				//printf("GZ: %d\r\n", (int)(gxyzf[2]*10.0f));
+	    				//printf("GX: %d           ", gxyz[0]);
+	    				//printf("GY: %d           ", gxyz[1]);
+	    				//printf("GZ: %d\r\n", gxyz[2]);
+
 }
 
 void ak_read(void){
@@ -713,16 +731,8 @@ void EXTI0_IRQHandler(void) {
     		//printf("CI_end: %d\r\n", inpwm[2]);
     		//printf("CI_1: %d\r\n", inpwm[0]);
     		//printf("CI_2: %d\r\n", inpwm[1]);
-    		GPIO_SetBits(GPIOD, GPIO_Pin_12);
-    		if(ster_pilot){
-    				GPIO_SetBits(GPIOD, GPIO_Pin_13);
-    				//printf("CI_end: %d\r\n", pilot_w);
-    				//capture_ready =0;
-    				PWM_SetDC(1,pilot_w);
-    				PWM_SetDC(2,pilot_w);
-    				PWM_SetDC(3,pilot_w);
-    				PWM_SetDC(4,pilot_w);
-    			}
+    		//GPIO_SetBits(GPIOD, GPIO_Pin_13);
+
 
 
     		capture_ready =0;
@@ -739,6 +749,38 @@ void EXTI15_10_IRQHandler(void) {
     /* Make sure that interrupt flag is set */
     if (EXTI_GetITStatus(EXTI_Line12) != RESET) {
         /* Do your stuff when PB12 is changed */
+    	if(capture_ready2 == 0)
+    	    	{
+    	    	 if(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_12) && !capture22) {
+
+    	    		 inpwm2[0]=TIM_GetCounter(TIM2);
+    	    		 capture12=1;
+    	    	  }
+    	    	 if(!GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_12) && capture12){
+
+    	    		  inpwm2[1]=TIM_GetCounter(TIM2);
+    	    		  capture22=1;
+
+    	    	  }
+    	    	}
+    	    	if(capture12 && capture22){
+    	    		capture_ready2 = 1;
+    	    		capture12=0;
+    	    		capture22=0;
+    	    		inpwm2[2] = inpwm2[1] - inpwm2[0];
+    	    		if(inpwm2[1]<inpwm2[0])
+    	    			inpwm2[2]=1001+inpwm2[2];
+    	    		pilot_w2=inpwm2[2];
+    	    		printf("CI_end: %d\r\n", inpwm2[2]);
+    	    		//printf("CI_1: %d\r\n", inpwm[0]);
+    	    		//printf("CI_2: %d\r\n", inpwm[1]);
+    	    		//GPIO_SetBits(GPIOD, GPIO_Pin_13);
+
+
+
+    	    		capture_ready2 =0;
+
+    	    	}
 
 
         /* Clear interrupt flag */
@@ -786,6 +828,7 @@ int main(void) {
     SystemInit();
     init_LED(); // initialize 4 LED's
     init_Button(); //initialize button
+    GPIO_SetBits(GPIOD, GPIO_Pin_12);
 	init_I2C1(); // initialize I2C peripheral
     init_gyro(); // initialize gyroskope
     init_akm(); // initialize akcelerometr i magnetometr
@@ -826,17 +869,39 @@ int main(void) {
 
 
     //Katy eulera
-    const float alpha = 0.5;
+    //const float alpha = 0.5;
     //const float M_PI = 3.14;
-    	double fXg = 0;
-    	double fYg = 0;
-    	double fZg = 0;
+    	//double fXg = 0;
+    	//double fYg = 0;
+    	//double fZg = 0;
+    float fxg = 0;
+    float fyg = 0;
+    float fzg = 0;
+    float fxa = 0;
+    float fya = 0;
+    float fza = 0;
+    float pitch, roll;
 
 
+    float out_pitch, previous_error, integral, derivative, error, setpoint, dt, Kp, Ki, Kd;
+    uint16_t error_pitch;
+    uint16_t ch1, ch2, ch3, ch4;
+    dt=0.0034;
+    //Kp= 0.05;
+    Kp= 0.05;
+    //Ki=0.1;
+    Ki=0.02;
+    //Kd=0.0;
+    Kd=0.0;
+    //P = 100.0, I = 150.0, D = -350.0
 
+    previous_error = 0;
+    integral = 0;
 while(1)
 {
 
+
+	//printf("CI_end: %d\r\n", pilot_w);
 //if (capture_ready){
 
 	//printf("CI_end: %d\r\n", inpwm[2]);
@@ -844,6 +909,27 @@ while(1)
 	//GPIO_SetBits(GPIOD, GPIO_Pin_12);
 
 //}
+
+	//triger bezpieczeñstwa z pilota
+	if(pilot_w2>90){
+				ster_pilot=1;
+			GPIO_ResetBits(GPIOD, GPIO_Pin_15);
+			GPIO_SetBits(GPIOD, GPIO_Pin_14);
+	}
+			if(pilot_w2<60){
+						ster_pilot=0;
+					GPIO_SetBits(GPIOD, GPIO_Pin_15);
+					GPIO_ResetBits(GPIOD, GPIO_Pin_14);
+					PWM_SetDC(1,50);
+					PWM_SetDC(2,50);
+					PWM_SetDC(3,50);
+					PWM_SetDC(4,50);
+					temp=0;
+					integral=0;
+					derivative=0;
+					}
+
+
 
 	//Button reaction
 
@@ -871,6 +957,7 @@ while(1)
 
 	     }
 	gyro_read();
+	GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
 	//printf("GX: %d           ", (int)(gxyzf[0]));
 	//printf("GY: %d           ", (int)(gxyzf[1]));
 	//printf("GZ: %d\r\n", (int)(gxyzf[2]));
@@ -883,27 +970,111 @@ while(1)
 
 
 
-	    double pitch, roll;
 
 
 	    //Low Pass Filter
-	    fXg = akxyzf[0] * alpha + (fXg * (1.0 - alpha));
-	    fYg = akxyzf[1] * alpha + (fYg * (1.0 - alpha));
-	    fZg = akxyzf[2] * alpha + (fZg * (1.0 - alpha));
+	    //fXg = akxyzf[0] * alpha + (fXg * (1.0 - alpha));
+	    //fYg = akxyzf[1] * alpha + (fYg * (1.0 - alpha));
+	    //fZg = akxyzf[2] * alpha + (fZg * (1.0 - alpha));
 
-	    //Roll & Pitch Equations
-	    roll  = (atan2(-fYg, fZg)*180.0)/M_PI;
-	    pitch = (atan2(fXg, sqrtf(fYg*fYg + fZg*fZg))*180.0)/M_PI;
 
-	    printf("Roll: %d   "       , (int)(roll*100.0f));
-	    printf("Pitch: %d\r\n"       , (int)(pitch*100.0f));
-	    for (i = 0; i < 50000; i++);
+
+		float pitchacc;
+		float rollacc;
+	    fxa = akxyzf[0];
+	   	fya = akxyzf[1];
+	   	fza = akxyzf[2];
+	    fxg = gxyzf[0];
+	   	fyg = gxyzf[1];
+	   	fzg = gxyzf[2];
+
+	   	pitchacc= atan2f(fxa,fza)*180/M_PI;
+	   	rollacc= atan2f(fya, fza)*180/M_PI;
+
+
+	   	pitch = pitch - (fyg)*0.0034;
+	   	roll = roll + (fxg)*0.0034;
+
+	   	pitch = pitch*0.98 +pitchacc*0.02;
+
+	   	roll = roll*0.98 + rollacc*0.02;
+
+
+
+	   	//if((int)(pitch)>90){
+	   		   	//GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
+	   		   	//}
+
+
 	//IMU reading
 	   //gyro_read();
 	   //ak_read();
 	   //m_read();
 	   //bar_read();
-	   //GPIO_ToggleBits(GPIOD, GPIO_Pin_2);
+
+	   	if(pitch>70 || pitch<-70){
+	   		   							ster_pilot=0;
+	   		   						GPIO_SetBits(GPIOD, GPIO_Pin_15);
+	   		   						GPIO_ResetBits(GPIOD, GPIO_Pin_14);
+	   		   						PWM_SetDC(1,50);
+	   		   						PWM_SetDC(2,50);
+	   		   						PWM_SetDC(3,50);
+	   		   						PWM_SetDC(4,50);
+	   		   						temp=0;
+	   		   						integral=0;
+	   		   						derivative=0;
+	   		   						}
+
+
+
+
+
+
+
+	   	if(integral>5)integral=5;
+	   	if(integral<-5)integral=-5;
+
+
+
+	   	if(ster_pilot){
+	   		    				//GPIO_SetBits(GPIOD, GPIO_Pin_13);
+	   		    				//printf("CI_end: %d\r\n", pilot_w);
+	   		    				//capture_ready =0;
+
+
+
+
+
+	   	setpoint = 0;
+
+	   	  error = setpoint - pitch;
+	   	  integral = integral + error*dt;
+	   	  derivative = (error - previous_error)/dt;
+	   	  out_pitch = Kp*error + Ki*integral + Kd*derivative;
+	   	  previous_error = error;
+
+	   	  error_pitch=(int)(out_pitch);
+
+
+	   	//ch1=pilot_w+error_pitch;
+	   	ch1=pilot_w+error_pitch;
+	   	ch2=pilot_w+error_pitch;
+	   	ch3=pilot_w-error_pitch;
+	   	ch4=pilot_w-error_pitch;
+	   	if(ch1>100) ch1=100;
+	   	if(ch1<50) ch1=50;
+	   	if(ch2>100) ch2=100;
+	   	if(ch2<50) ch2=50;
+	   	if(ch3>100) ch3=100;
+	   	if(ch3<50) ch3=50;
+	   	if(ch4>100) ch4=100;
+	   	if(ch4<50) ch4=50;
+	   	PWM_SetDC(1,ch1);
+	   	PWM_SetDC(2,ch2);
+	   	PWM_SetDC(3,ch3);
+	   	PWM_SetDC(4,ch4);
+	   	}
+
 }
 
 

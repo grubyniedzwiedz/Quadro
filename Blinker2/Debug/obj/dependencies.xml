@@ -63,15 +63,6 @@
       </source>
       <source file="..\..\..\semihosting\semihosting.h" lastModified="14cc022963d">
       </source>
-      <source file="..\..\..\main.c" lastModified="14f33c7665a">
-         <include file="..\..\..\cmsis_lib\include\stm32f4xx_rcc.h"/>
-         <include file="..\..\..\cmsis_lib\include\stm32f4xx_gpio.h"/>
-         <include file="..\..\..\cmsis_lib\include\stm32f4xx_i2c.h"/>
-         <include file="..\..\..\cmsis_lib\include\stm32f4xx_tim.h"/>
-         <include file="..\..\..\cmsis_lib\include\stm32f4xx_exti.h"/>
-         <include file="..\..\..\cmsis_lib\include\stm32f4xx_syscfg.h"/>
-         <include file="..\..\..\cmsis_lib\include\misc.h"/>
-      </source>
       <source file="..\..\..\cmsis\core_cmFunc.h" lastModified="14c5dc11258">
       </source>
       <source file="..\..\..\cmsis_lib\source\stm32f4xx_rcc.c" lastModified="14c5dc139d4">
