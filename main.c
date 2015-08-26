@@ -20,9 +20,9 @@ int inpwm[3];
 
 	volatile uint16_t pilot_w2;
 	int inpwm2[3];
-		uint capture12=0;
-		uint capture22=0;
-		uint capture_ready2=0;
+	uint capture12=0;
+	uint capture22=0;
+	uint capture_ready2=0;
 
 
 //adresowanie gyro i adresy srejestrow
@@ -868,12 +868,6 @@ int main(void) {
     int wyp;
 
 
-    //Katy eulera
-    //const float alpha = 0.5;
-    //const float M_PI = 3.14;
-    	//double fXg = 0;
-    	//double fYg = 0;
-    	//double fZg = 0;
     float fxg = 0;
     float fyg = 0;
     float fzg = 0;
@@ -881,34 +875,45 @@ int main(void) {
     float fya = 0;
     float fza = 0;
     float pitch, roll;
+	float pitchacc;
+	float rollacc;
 
+	float dt;
 
-    float out_pitch, previous_error, integral, derivative, error, setpoint, dt, Kp, Ki, Kd;
-    uint16_t error_pitch;
+    float out_pitch, previous_error_pitch, integral_pitch, derivative_pitch, error_pitch, setpoint_pitch, Kp_pitch, Ki_pitch, Kd_pitch;
+    uint16_t out_pitch_int;
+
+    float out_roll, previous_error_roll, integral_roll, derivative_roll, error_roll, setpoint_roll, Kp_roll, Ki_roll, Kd_roll;
+    uint16_t out_roll_int;
+
     uint16_t ch1, ch2, ch3, ch4;
     dt=0.0034;
-    //Kp= 0.05;
-    Kp= 0.05;
-    //Ki=0.1;
-    Ki=0.02;
-    //Kd=0.0;
-    Kd=0.0;
-    //P = 100.0, I = 150.0, D = -350.0
 
-    previous_error = 0;
-    integral = 0;
+    //Pitch
+    //Kp= 0.05;
+    Kp_pitch= 0.05;
+    //Ki=0.04;
+    Ki_pitch=0.04;
+    //Kd=0.02;
+    Kd_pitch=0.02;
+
+    //Roll
+    //Kp= 0.1;
+    Kp_roll= 0.055;
+    //Ki=0.04;
+    Ki_roll=0.0;
+    //Kd=0.02;
+    Kd_roll=0.0;
+
+
+
+    previous_error_pitch = 0;
+    integral_pitch = 0;
+    previous_error_roll = 0;
+    integral_roll = 0;
 while(1)
 {
 
-
-	//printf("CI_end: %d\r\n", pilot_w);
-//if (capture_ready){
-
-	//printf("CI_end: %d\r\n", inpwm[2]);
-	//capture_ready=0;
-	//GPIO_SetBits(GPIOD, GPIO_Pin_12);
-
-//}
 
 	//triger bezpieczeñstwa z pilota
 	if(pilot_w2>90){
@@ -917,7 +922,7 @@ while(1)
 			GPIO_SetBits(GPIOD, GPIO_Pin_14);
 	}
 			if(pilot_w2<60){
-						ster_pilot=0;
+					ster_pilot=0;
 					GPIO_SetBits(GPIOD, GPIO_Pin_15);
 					GPIO_ResetBits(GPIOD, GPIO_Pin_14);
 					PWM_SetDC(1,50);
@@ -925,8 +930,10 @@ while(1)
 					PWM_SetDC(3,50);
 					PWM_SetDC(4,50);
 					temp=0;
-					integral=0;
-					derivative=0;
+					integral_pitch=0;
+					derivative_pitch=0;
+					integral_roll=0;
+					derivative_roll=0;
 					}
 
 
@@ -951,13 +958,17 @@ while(1)
 		PWM_SetDC(3,50);
 		PWM_SetDC(4,50);
 		temp=0;
+		integral_pitch=0;
+		derivative_pitch=0;
+		integral_roll=0;
+		derivative_roll=0;
 		}
 
 	 //for (i = 0; i < 5000000; i++);
 
 	     }
 	gyro_read();
-	GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
+	//GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
 	//printf("GX: %d           ", (int)(gxyzf[0]));
 	//printf("GY: %d           ", (int)(gxyzf[1]));
 	//printf("GZ: %d\r\n", (int)(gxyzf[2]));
@@ -969,18 +980,6 @@ while(1)
 
 
 
-
-
-
-	    //Low Pass Filter
-	    //fXg = akxyzf[0] * alpha + (fXg * (1.0 - alpha));
-	    //fYg = akxyzf[1] * alpha + (fYg * (1.0 - alpha));
-	    //fZg = akxyzf[2] * alpha + (fZg * (1.0 - alpha));
-
-
-
-		float pitchacc;
-		float rollacc;
 	    fxa = akxyzf[0];
 	   	fya = akxyzf[1];
 	   	fza = akxyzf[2];
@@ -996,7 +995,6 @@ while(1)
 	   	roll = roll + (fxg)*0.0034;
 
 	   	pitch = pitch*0.98 +pitchacc*0.02;
-
 	   	roll = roll*0.98 + rollacc*0.02;
 
 
@@ -1006,14 +1004,8 @@ while(1)
 	   		   	//}
 
 
-	//IMU reading
-	   //gyro_read();
-	   //ak_read();
-	   //m_read();
-	   //bar_read();
-
-	   	if(pitch>70 || pitch<-70){
-	   		   							ster_pilot=0;
+	   	if(pitch>70 || pitch<-70 || roll>70 || roll<-70){
+	   		   						ster_pilot=0;
 	   		   						GPIO_SetBits(GPIOD, GPIO_Pin_15);
 	   		   						GPIO_ResetBits(GPIOD, GPIO_Pin_14);
 	   		   						PWM_SetDC(1,50);
@@ -1021,46 +1013,57 @@ while(1)
 	   		   						PWM_SetDC(3,50);
 	   		   						PWM_SetDC(4,50);
 	   		   						temp=0;
-	   		   						integral=0;
-	   		   						derivative=0;
+	   		   						integral_pitch=0;
+	   		   						derivative_pitch=0;
+	   		   						integral_roll=0;
+	   		   						derivative_roll=0;
 	   		   						}
 
 
 
 
+	   	if(integral_pitch>5)integral_pitch=5;
+	   	if(integral_pitch<-5)integral_pitch=-5;
 
-
-
-	   	if(integral>5)integral=5;
-	   	if(integral<-5)integral=-5;
-
-
+	   	if(integral_roll>5)integral_roll=5;
+	   	if(integral_roll<-5)integral_roll=-5;
 
 	   	if(ster_pilot){
-	   		    				//GPIO_SetBits(GPIOD, GPIO_Pin_13);
-	   		    				//printf("CI_end: %d\r\n", pilot_w);
-	   		    				//capture_ready =0;
+
+	   	setpoint_pitch = 0;
+
+
+	   	error_pitch = setpoint_pitch - pitch;
+	   	integral_pitch = integral_pitch + error_pitch*dt;
+	   	derivative_pitch = (error_pitch - previous_error_pitch)/dt;
+	   	out_pitch = Kp_pitch*error_pitch + Ki_pitch*integral_pitch + Kd_pitch*derivative_pitch;
+	   	previous_error_pitch = error_pitch;
+
+	   	out_pitch_int=(int)(out_pitch);
 
 
 
+	   	setpoint_roll = 0;
 
 
-	   	setpoint = 0;
+	   	error_roll = setpoint_roll - roll;
+	   	integral_roll = integral_roll + error_roll*dt;
+	   	derivative_roll = (error_roll - previous_error_roll)/dt;
+	   	out_roll = Kp_roll*error_roll + Ki_roll*integral_roll + Kd_roll*derivative_roll;
+	   	previous_error_roll = error_roll;
 
-	   	  error = setpoint - pitch;
-	   	  integral = integral + error*dt;
-	   	  derivative = (error - previous_error)/dt;
-	   	  out_pitch = Kp*error + Ki*integral + Kd*derivative;
-	   	  previous_error = error;
-
-	   	  error_pitch=(int)(out_pitch);
+	   	out_roll_int=(int)(out_roll);
 
 
-	   	//ch1=pilot_w+error_pitch;
-	   	ch1=pilot_w+error_pitch;
-	   	ch2=pilot_w+error_pitch;
-	   	ch3=pilot_w-error_pitch;
-	   	ch4=pilot_w-error_pitch;
+	   	//if(out_roll_int>10)GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
+	   	//out_pitch_int=0;
+
+
+
+	   	ch1=pilot_w+out_pitch_int+out_roll_int;
+	   	ch2=pilot_w+out_pitch_int-out_roll_int;
+	   	ch3=pilot_w-out_pitch_int+out_roll_int;
+	   	ch4=pilot_w-out_pitch_int-out_roll_int;
 	   	if(ch1>100) ch1=100;
 	   	if(ch1<50) ch1=50;
 	   	if(ch2>100) ch2=100;
