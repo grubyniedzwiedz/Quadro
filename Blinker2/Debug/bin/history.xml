@@ -1,21 +1,23 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <history>
    <processor signature="arm-none-eabi-gcc -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wall -g -nostartfiles -Map=Blinker2.map -Os --gc-sections -lm -lgcc -lc -LC:\CooCox\CoIDE\configuration\ProgramData\Blinker2 -TC:\CooCox\CoIDE\configuration\ProgramData\Blinker2/arm-gcc-link.ld -g">
-      <target file="Blinker2.elf" lastModified="14f614ade68">
-         <source file="..\obj\semihosting.o" lastModified="14f33c285d6"/>
-         <source file="..\obj\stm32f4xx_syscfg.o" lastModified="14f33c28630"/>
-         <source file="..\obj\startup_stm32f4xx.o" lastModified="14f33c2867d"/>
-         <source file="..\obj\main.o" lastModified="14f614adc80"/>
-         <source file="..\obj\stm32f4xx_rcc.o" lastModified="14f33c288bb"/>
-         <source file="..\obj\printf.o" lastModified="14f33c2895d"/>
-         <source file="..\obj\stm32f4xx_gpio.o" lastModified="14f33c289d8"/>
-         <source file="..\obj\sh_cmd.o" lastModified="14f33c289e7"/>
-         <source file="..\obj\system_stm32f4xx.o" lastModified="14f33c28a47"/>
-         <source file="..\obj\syscalls.o" lastModified="14f33c28a9d"/>
-         <source file="..\obj\stm32f4xx_i2c.o" lastModified="14f33c28b52"/>
-         <source file="..\obj\stm32f4xx_exti.o" lastModified="14f33c28bb4"/>
-         <source file="..\obj\misc.o" lastModified="14f33c28c13"/>
-         <source file="..\obj\stm32f4xx_tim.o" lastModified="14f33c28d70"/>
+      <target file="Blinker2.elf" lastModified="1508ba6f35b">
+         <source file="..\obj\semihosting.o" lastModified="1502a9930e7"/>
+         <source file="..\obj\stm32f4xx_syscfg.o" lastModified="1507c07d733"/>
+         <source file="..\obj\startup_stm32f4xx.o" lastModified="1502a993180"/>
+         <source file="..\obj\main.o" lastModified="1508ba6f185"/>
+         <source file="..\obj\stm32f4xx_rcc.o" lastModified="1507c07d8d2"/>
+         <source file="..\obj\printf.o" lastModified="1502a9933c3"/>
+         <source file="..\obj\stm32f4xx_gpio.o" lastModified="1507c07d93e"/>
+         <source file="..\obj\sh_cmd.o" lastModified="1502a993438"/>
+         <source file="..\obj\system_stm32f4xx.o" lastModified="1507c07d994"/>
+         <source file="..\obj\syscalls.o" lastModified="1502a9934e7"/>
+         <source file="..\obj\stm32f4xx_dma.o" lastModified="1507c07da10"/>
+         <source file="..\obj\stm32f4xx_spi.o" lastModified="1507c07daa7"/>
+         <source file="..\obj\stm32f4xx_i2c.o" lastModified="1507c07db40"/>
+         <source file="..\obj\stm32f4xx_exti.o" lastModified="1507c07db9b"/>
+         <source file="..\obj\misc.o" lastModified="1507c07dbe6"/>
+         <source file="..\obj\stm32f4xx_tim.o" lastModified="1507c07dd0e"/>
       </target>
    </processor>
 </history>
