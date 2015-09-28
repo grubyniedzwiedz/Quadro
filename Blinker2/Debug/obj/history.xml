@@ -22,14 +22,14 @@
       <target file="stm32f4xx_i2c.o" lastModified="14f33c28b52">
          <source file="..\..\..\cmsis_lib\source\stm32f4xx_i2c.c" lastModified="14cc00d00bf"/>
       </target>
-      <target file="stm32f4xx_syscfg.o" lastModified="14f33c28630">
-         <source file="..\..\..\cmsis_lib\source\stm32f4xx_syscfg.c" lastModified="14f3282f0d3"/>
-      </target>
       <target file="stm32f4xx_exti.o" lastModified="14f33c28bb4">
          <source file="..\..\..\cmsis_lib\source\stm32f4xx_exti.c" lastModified="14f32819380"/>
       </target>
-      <target file="main.o" lastModified="14f614adc80">
-         <source file="..\..\..\main.c" lastModified="14f614acbc2"/>
+      <target file="stm32f4xx_syscfg.o" lastModified="14f33c28630">
+         <source file="..\..\..\cmsis_lib\source\stm32f4xx_syscfg.c" lastModified="14f3282f0d3"/>
+      </target>
+      <target file="main.o" lastModified="14fc4d01760">
+         <source file="..\..\..\main.c" lastModified="14fc4d004be"/>
       </target>
       <target file="sh_cmd.o" lastModified="14f33c289e7">
          <source file="..\..\..\semihosting\sh_cmd.s" lastModified="14cc022963d"/>

@@ -29,9 +29,9 @@ int inpwm[3];
 #define GYRO_ADDRESS_TR  0b11010111
 #define GYRO_ADDRESS_REC 0b11010110
 
-     int CTRL_REG1      = 0x20; // D20, 4200D
-     int CTRL_REG4      = 0x23; // D20, 4200D
-     int LOW_ODR        = 0x39;  // D20H
+     int CTRL_REG1      = 0x20;
+     int CTRL_REG4      = 0x23;
+     int LOW_ODR        = 0x39;
 
 
 //adresowanie ak i m oraz adresy rejestrow
@@ -39,7 +39,7 @@ int inpwm[3];
 #define AKM_ADDRESS_REC 0b00111010
 
 
-//adresowanie ak i m oraz adresy rejestrow
+//adresowanie barometru oraz adresy rejestrow
 #define BAR_ADDRESS_TR  0b10111011
 #define BAR_ADDRESS_REC 0b10111011
 
@@ -108,11 +108,11 @@ void init_I2C1(void){
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1); // SDA
 
 	// configure I2C1
-	I2C_InitStruct.I2C_ClockSpeed = 50000; 		// 100kHz
+	I2C_InitStruct.I2C_ClockSpeed = 50000; 		// 50kHz
 	I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;			// I2C mode
 	I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;	// 50% duty cycle --> standard
 	I2C_InitStruct.I2C_OwnAddress1 = 0x00;			// own address, not relevant in master mode
-	I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;		// disable acknowledge when reading (can be changed later on)
+	I2C_InitStruct.I2C_Ack = I2C_Ack_Disable;
 	I2C_InitStruct.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit; // set address length to 7 bit addresses
 	I2C_Init(I2C1, &I2C_InitStruct);				// init I2C1
 
@@ -334,9 +334,9 @@ void gyro_read(void){
 
 
 
-	    				//printf("GX: %d           ", (int)(gxyzf[0]*10.0f));
-	    				//printf("GY: %d           ", (int)(gxyzf[1]*10.0f));
-	    				//printf("GZ: %d\r\n", (int)(gxyzf[2]*10.0f));
+	    				printf("GX: %d           ", (int)(gxyzf[0]*10.0f));
+	    				printf("GY: %d           ", (int)(gxyzf[1]*10.0f));
+	    				printf("GZ: %d\r\n", (int)(gxyzf[2]*10.0f));
 	    				//printf("GX: %d           ", gxyz[0]);
 	    				//printf("GY: %d           ", gxyz[1]);
 	    				//printf("GZ: %d\r\n", gxyz[2]);
@@ -394,9 +394,9 @@ void ak_read(void){
 	    		akxyzf[2]=akxyzf[2]/8192;
 
 
-	    				//printf("AX: %d           ", (int)(akxyzf[0]*100.0f));
-	    				//printf("AY: %d           ", (int)(akxyzf[1]*100.0f));
-	    				//printf("AZ: %d\r\n"       , (int)(akxyzf[2]*100.0f));
+	    				printf("AX: %d           ", (int)(akxyzf[0]*100.0f));
+	    				printf("AY: %d           ", (int)(akxyzf[1]*100.0f));
+	    				printf("AZ: %d\r\n"       , (int)(akxyzf[2]*100.0f));
 
 
 }
@@ -878,6 +878,11 @@ int main(void) {
 	float pitchacc;
 	float rollacc;
 
+	//float roll_tab[50];
+	//float pitch_tab[50];
+	//float ust_pitch=0;
+	//float ust_roll=0;
+
 	float dt;
 
     float out_pitch, previous_error_pitch, integral_pitch, derivative_pitch, error_pitch, setpoint_pitch, Kp_pitch, Ki_pitch, Kd_pitch;
@@ -898,10 +903,10 @@ int main(void) {
     Kd_pitch=0.02;
 
     //Roll
-    //Kp= 0.1;
-    Kp_roll= 0.055;
-    //Ki=0.04;
-    Ki_roll=0.0;
+    //Kp= 0.01;
+    Kp_roll= 0.01;
+    //Ki=0.2;
+    Ki_roll=0;
     //Kd=0.02;
     Kd_roll=0.0;
 
@@ -911,6 +916,9 @@ int main(void) {
     integral_pitch = 0;
     previous_error_roll = 0;
     integral_roll = 0;
+    setpoint_pitch = 0;
+    setpoint_roll = 0;
+
 while(1)
 {
 
@@ -998,10 +1006,9 @@ while(1)
 	   	roll = roll*0.98 + rollacc*0.02;
 
 
-
 	   	//if((int)(pitch)>90){
-	   		   	//GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
-	   		   	//}
+	   		//   	GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
+	   		  // 	}
 
 
 	   	if(pitch>70 || pitch<-70 || roll>70 || roll<-70){
@@ -1025,12 +1032,27 @@ while(1)
 	   	if(integral_pitch>5)integral_pitch=5;
 	   	if(integral_pitch<-5)integral_pitch=-5;
 
-	   	if(integral_roll>5)integral_roll=5;
-	   	if(integral_roll<-5)integral_roll=-5;
+	   	//if(integral_roll>5)integral_roll=5;
+	   	//if(integral_roll<-5)integral_roll=-5;
 
+
+
+	   	/*if(i<50){
+	   		pitch_tab[i]=pitch;
+	   		roll_tab[i]=roll;
+	   		i++;
+	   	}
+	   	if(i=50){
+	   		int i2=0;
+	   		for(i2;i2<50;i2++){
+	   			ust_pitch=ust_pitch+pitch_tab[i2];
+	   			ust_roll=ust_roll+roll_tab[i2];
+	   		}
+	   		ust_pitch=ust_pitch/50;
+	   		ust_roll=ust_roll/50;
+	   	}
+*/
 	   	if(ster_pilot){
-
-	   	setpoint_pitch = 0;
 
 
 	   	error_pitch = setpoint_pitch - pitch;
@@ -1043,7 +1065,7 @@ while(1)
 
 
 
-	   	setpoint_roll = 0;
+
 
 
 	   	error_roll = setpoint_roll - roll;
@@ -1056,7 +1078,7 @@ while(1)
 
 
 	   	//if(out_roll_int>10)GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
-	   	//out_pitch_int=0;
+	   	out_pitch_int=0;
 
 
 
