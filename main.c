@@ -108,7 +108,11 @@ void init_I2C1(void){
 	GPIO_PinAFConfig(GPIOB, GPIO_PinSource9, GPIO_AF_I2C1); // SDA
 
 	// configure I2C1
+<<<<<<< HEAD
 	I2C_InitStruct.I2C_ClockSpeed = 400000; 		// 400 kHz
+=======
+	I2C_InitStruct.I2C_ClockSpeed = 50000; 		// 50kHz
+>>>>>>> 8640e189a0faa31c6ce61518e036c6f1a99b0002
 	I2C_InitStruct.I2C_Mode = I2C_Mode_I2C;			// I2C mode
 	I2C_InitStruct.I2C_DutyCycle = I2C_DutyCycle_2;	// 50% duty cycle --> standard
 	I2C_InitStruct.I2C_OwnAddress1 = 0x00;			// own address, not relevant in master mode
@@ -335,10 +339,16 @@ void gyro_read(void){
 	    		//Kalibracja rêczna
 	    		gxyzf[0] = gxyzf[0]-3;
 
+<<<<<<< HEAD
 
 	    				//printf("GX: %d           ", (int)(gxyzf[0]*100.0f));
 	    				//printf("GY: %d           ", (int)(gxyzf[1]*100.0f));
 	    				//printf("GZ: %d\r\n", (int)(gxyzf[2]*100.0f));
+=======
+	    				printf("GX: %d           ", (int)(gxyzf[0]*10.0f));
+	    				printf("GY: %d           ", (int)(gxyzf[1]*10.0f));
+	    				printf("GZ: %d\r\n", (int)(gxyzf[2]*10.0f));
+>>>>>>> 8640e189a0faa31c6ce61518e036c6f1a99b0002
 	    				//printf("GX: %d           ", gxyz[0]);
 	    				//printf("GY: %d           ", gxyz[1]);
 	    				//printf("GZ: %d\r\n", gxyz[2]);
@@ -396,9 +406,9 @@ void ak_read(void){
 	    		akxyzf[2]=akxyzf[2]/8192;
 
 
-	    				//printf("AX: %d           ", (int)(akxyzf[0]*100.0f));
-	    				//printf("AY: %d           ", (int)(akxyzf[1]*100.0f));
-	    				//printf("AZ: %d\r\n"       , (int)(akxyzf[2]*100.0f));
+	    				printf("AX: %d           ", (int)(akxyzf[0]*100.0f));
+	    				printf("AY: %d           ", (int)(akxyzf[1]*100.0f));
+	    				printf("AZ: %d\r\n"       , (int)(akxyzf[2]*100.0f));
 
 
 }
@@ -940,9 +950,15 @@ int main(void) {
 
     //Roll
     //Kp= 0.01;
+<<<<<<< HEAD
     Kp_roll= 0.2;
     //Ki=0.2;
     Ki_roll=0.04;
+=======
+    Kp_roll= 0.01;
+    //Ki=0.2;
+    Ki_roll=0;
+>>>>>>> 8640e189a0faa31c6ce61518e036c6f1a99b0002
     //Kd=0.02;
     Kd_roll=0.02;
 
@@ -955,7 +971,10 @@ int main(void) {
     setpoint_pitch = 0;
     setpoint_roll = 0;
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 8640e189a0faa31c6ce61518e036c6f1a99b0002
 while(1)
 {
 	//gyro_read();
@@ -1076,12 +1095,30 @@ while(1)
 	   	if(integral_pitch>5)integral_pitch=5;
 	   	if(integral_pitch<-5)integral_pitch=-5;
 
-	   	if(integral_roll>5)integral_roll=5;
-	   	if(integral_roll<-5)integral_roll=-5;
+	   	//if(integral_roll>5)integral_roll=5;
+	   	//if(integral_roll<-5)integral_roll=-5;
 
 
 
+<<<<<<< HEAD
 
+=======
+	   	/*if(i<50){
+	   		pitch_tab[i]=pitch;
+	   		roll_tab[i]=roll;
+	   		i++;
+	   	}
+	   	if(i=50){
+	   		int i2=0;
+	   		for(i2;i2<50;i2++){
+	   			ust_pitch=ust_pitch+pitch_tab[i2];
+	   			ust_roll=ust_roll+roll_tab[i2];
+	   		}
+	   		ust_pitch=ust_pitch/50;
+	   		ust_roll=ust_roll/50;
+	   	}
+*/
+>>>>>>> 8640e189a0faa31c6ce61518e036c6f1a99b0002
 	   	if(ster_pilot){
 
 
@@ -1096,6 +1133,10 @@ while(1)
 	   	//out_pitch_int=0;
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8640e189a0faa31c6ce61518e036c6f1a99b0002
 
 
 	   	error_roll = setpoint_roll - roll;
@@ -1110,6 +1151,11 @@ while(1)
 	   	//out_roll_int=0;
 	   	//GPIO_ToggleBits(GPIOD, GPIO_Pin_12);
 
+<<<<<<< HEAD
+=======
+	   	//if(out_roll_int>10)GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
+	   	out_pitch_int=0;
+>>>>>>> 8640e189a0faa31c6ce61518e036c6f1a99b0002
 
 
 
